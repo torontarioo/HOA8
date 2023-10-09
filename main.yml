@@ -1,0 +1,87 @@
+#this is the main.yml for CentOS
+
+---
+
+  - name: nagios libraries
+    tags: libraries, dependencies
+    package:
+      name:
+        - gcc
+        - glibc
+        - glibc-common
+        - perl
+        - httpd
+        - php
+        - wget
+        - gd   
+        - gd-devel
+        - make
+        - gettext
+        - automake
+        - net-snmp-utils
+        - python-pip
+
+  - name: passlib package
+    pip:
+      name: passlib
+   
+  - name: Nagios directory PATH
+    file:
+      path: ~/nagios
+      state: directory
+  
+  - name: downloading nagios
+    unarchive:
+      srcc: https://github.com/NagiosEnterprises/nagioscore/archive/nagios-4.4.6.tar.gz
+      dest: ~/nagios
+      remote_src: yes
+      mode: 0777
+      owner: root
+      group: root
+
+  - name: downloading nagios plugins
+    unarchive:
+      src: https://github.com/nagios-plugins/nagios-plugins/archive/release-2.3.3.tae.gz
+      dest: ~/nagios
+      remote_src: yes
+      mode: 0777
+       owner: root
+
+
+  - name: install, compile, adding users and groups
+    shell: |
+     cd ~/nagios/nagioscore-**
+     ./configure
+     make install-groups-users
+     usermod -a -G nagios apache
+     name install
+     make install-daemoninit
+     make install-commandmode
+     make install-config
+     make install-webconf
+
+  - name: compile and install plugins
+    shell: |
+      cd ~/nagios/nagios-plugins*
+      ./tools/setup
+      ./configure
+      make
+      make install
+  
+  - name: Adding Users to nagios
+    community.general.htpasswd:
+      path: /usr/local/nagios/etc/htpasswd.users
+      name: admin
+      password: admin
+
+  - name: Nagios start/Enable check
+    service:
+      name: nagios
+      state: restarted
+      enabled: true
+
+  - name: Apache/httpd Start/Enable Check
+    service:
+      name: httpd
+      state: restarted
+      enabled: true
